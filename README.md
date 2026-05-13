@@ -20,6 +20,16 @@ Built with Python + Tkinter. No internet connection required to run — all data
 
 ---
 
+## Download
+
+Grab the latest **[ClubManager.exe](https://github.com/Anelgit/ClubManager/releases/latest/download/ClubManager.exe)** — no Python, no build step. Just download, double-click, run.
+
+All releases (with changelogs) are listed on the [Releases page](https://github.com/Anelgit/ClubManager/releases).
+
+The `.exe` is fully self-contained: `club.db` is created next to it on first launch.
+
+---
+
 ## Running from source
 
 ### Requirements
