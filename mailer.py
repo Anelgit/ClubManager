@@ -33,9 +33,11 @@ SETTING_KEYS = (
     "smtp_host",
     "smtp_port",
     "smtp_user",
-    "smtp_password",   # stored base64-obfuscated
-    "smtp_security",   # "starttls" | "ssl" | "none"
+    "smtp_password",        # stored base64-obfuscated
+    "smtp_security",        # "starttls" | "ssl" | "none"
     "auto_send_enabled",
+    "email_body_upcoming",  # custom template; empty → use i18n default
+    "email_body_overdue",   # custom template; empty → use i18n default
 )
 
 
@@ -50,6 +52,8 @@ class EmailSettings:
     smtp_password: str = ""           # plaintext in memory only
     smtp_security: str = "starttls"   # starttls / ssl / none
     auto_send_enabled: bool = False
+    email_body_upcoming: str = ""     # empty → use i18n default
+    email_body_overdue: str = ""      # empty → use i18n default
 
     def is_configured(self) -> bool:
         return bool(self.sender_email and self.smtp_host
@@ -81,6 +85,8 @@ def load_settings() -> EmailSettings:
         smtp_password=_deobfuscate(raw.get("smtp_password", "")),
         smtp_security=raw.get("smtp_security", "starttls"),
         auto_send_enabled=raw.get("auto_send_enabled", "0") == "1",
+        email_body_upcoming=raw.get("email_body_upcoming", ""),
+        email_body_overdue=raw.get("email_body_overdue", ""),
     )
 
 
@@ -94,6 +100,8 @@ def save_settings(s: EmailSettings) -> None:
     db.set_setting("smtp_password", _obfuscate(s.smtp_password))
     db.set_setting("smtp_security", s.smtp_security)
     db.set_setting("auto_send_enabled", "1" if s.auto_send_enabled else "0")
+    db.set_setting("email_body_upcoming", s.email_body_upcoming)
+    db.set_setting("email_body_overdue", s.email_body_overdue)
 
 
 # ---------- Message template (language-aware) -----------------------------
@@ -120,15 +128,31 @@ def compose_reminder(member: Member, settings: EmailSettings,
     thanks = i18n.t("email.thanks")
     sign_off = i18n.t("email.sign_off")
 
+    fmt_args_overdue = dict(due=_fmt_date(due), ago=i18n.days_word(abs(days)),
+                            name=member.name, club=club)
+    fmt_args_upcoming = dict(due=_fmt_date(due), when=_when_phrase(member, days),
+                             name=member.name, club=club)
+
     if days < 0:
         subject = i18n.t("email.subject_overdue", club=club)
-        middle = i18n.t("email.body_overdue",
-                        due=_fmt_date(due), ago=i18n.days_word(abs(days)))
+        template = settings.email_body_overdue
+        if template:
+            try:
+                middle = template.format(**fmt_args_overdue)
+            except (KeyError, IndexError):
+                middle = template
+        else:
+            middle = i18n.t("email.body_overdue", **fmt_args_overdue)
     else:
         subject = i18n.t("email.subject_upcoming", club=club)
-        middle = i18n.t("email.body_upcoming",
-                        due=_fmt_date(due),
-                        when=_when_phrase(member, days))
+        template = settings.email_body_upcoming
+        if template:
+            try:
+                middle = template.format(**fmt_args_upcoming)
+            except (KeyError, IndexError):
+                middle = template
+        else:
+            middle = i18n.t("email.body_upcoming", **fmt_args_upcoming)
 
     body = f"{greeting}\n\n{middle}\n\n{thanks}\n\n{sign_off}\n{club}"
 

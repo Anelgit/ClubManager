@@ -291,145 +291,266 @@ class EmailSettingsDialog(tk.Toplevel):
         self.title(t("dlg.email_settings"))
         self.transient(master)
         self.grab_set()
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.configure(padx=20, pady=20)
 
         s = mailer.load_settings()
-
+        is_custom = self._detect_preset(s) == "Custom"
         big = ("Segoe UI", 11)
-        body = ttk.Frame(self)
-        body.pack(fill="both", expand=True)
 
+        # ── Two-panel layout ──────────────────────────────────────────────
+        panels = ttk.Frame(self)
+        panels.pack(fill="both", expand=True)
+        panels.columnconfigure(0, weight=0)
+        panels.columnconfigure(2, weight=1)
+        panels.rowconfigure(0, weight=1)
+
+        left = ttk.Frame(panels, padding=(0, 0, 0, 0))
+        left.grid(row=0, column=0, sticky="nswe")
+        left.columnconfigure(1, weight=1)
+
+        ttk.Separator(panels, orient="vertical").grid(
+            row=0, column=1, sticky="ns", padx=16)
+
+        right = ttk.Frame(panels)
+        right.grid(row=0, column=2, sticky="nswe")
+        right.columnconfigure(0, weight=1)
+        right.rowconfigure(4, weight=1)   # upcoming text expands
+        right.rowconfigure(7, weight=1)   # overdue text expands
+
+        # ── LEFT PANEL ────────────────────────────────────────────────────
         row = 0
 
-        ttk.Label(body, text=t("label.club_name"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Label(left, text=t("label.club_name"), font=big
+                  ).grid(row=row, column=0, sticky="w", pady=5)
         self.club_var = tk.StringVar(value=s.club_name)
-        ttk.Entry(body, textvariable=self.club_var, font=big, width=36
-                  ).grid(row=row, column=1, columnspan=2, sticky="we", pady=4, padx=(10, 0))
+        ttk.Entry(left, textvariable=self.club_var, font=big, width=34
+                  ).grid(row=row, column=1, columnspan=3, sticky="we",
+                         pady=5, padx=(10, 0))
         row += 1
 
-        ttk.Label(body, text=t("label.sender_name"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Label(left, text=t("label.sender_name"), font=big
+                  ).grid(row=row, column=0, sticky="w", pady=5)
         self.sender_name_var = tk.StringVar(value=s.sender_name)
-        ttk.Entry(body, textvariable=self.sender_name_var, font=big, width=36
-                  ).grid(row=row, column=1, columnspan=2, sticky="we", pady=4, padx=(10, 0))
+        ttk.Entry(left, textvariable=self.sender_name_var, font=big, width=34
+                  ).grid(row=row, column=1, columnspan=3, sticky="we",
+                         pady=5, padx=(10, 0))
         row += 1
 
-        ttk.Label(body, text=t("label.sender_email"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Label(left, text=t("label.sender_email"), font=big
+                  ).grid(row=row, column=0, sticky="w", pady=(5, 0))
         self.sender_email_var = tk.StringVar(value=s.sender_email)
-        ttk.Entry(body, textvariable=self.sender_email_var, font=big, width=36
-                  ).grid(row=row, column=1, columnspan=2, sticky="we", pady=4, padx=(10, 0))
+        ttk.Entry(left, textvariable=self.sender_email_var, font=big, width=34
+                  ).grid(row=row, column=1, columnspan=3, sticky="we",
+                         pady=(5, 0), padx=(10, 0))
+        row += 1
+        ttk.Label(left, text=t("label.email_login_hint"),
+                  font=("Segoe UI", 9), foreground="#555"
+                  ).grid(row=row, column=1, columnspan=3, sticky="w",
+                         pady=(1, 6), padx=(10, 0))
         row += 1
 
-        ttk.Label(body, text=t("label.provider"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
+        # smtp_user stays hidden, auto-synced with sender_email
+        self.smtp_user_var = tk.StringVar(value=s.smtp_user or s.sender_email)
+        self._last_synced_email = s.smtp_user or s.sender_email
+
+        def _sync_user(*_):
+            if self.smtp_user_var.get() == self._last_synced_email:
+                new = self.sender_email_var.get()
+                self.smtp_user_var.set(new)
+                self._last_synced_email = new
+
+        self.sender_email_var.trace_add("write", _sync_user)
+
+        ttk.Label(left, text=t("label.provider"), font=big
+                  ).grid(row=row, column=0, sticky="w", pady=5)
         self.preset_var = tk.StringVar(value=self._detect_preset(s))
-        preset_cb = ttk.Combobox(body, textvariable=self.preset_var, font=big, width=34,
+        preset_cb = ttk.Combobox(left, textvariable=self.preset_var, font=big, width=32,
                                  values=list(SMTP_PRESETS.keys()), state="readonly")
-        preset_cb.grid(row=row, column=1, columnspan=2, sticky="we", pady=4, padx=(10, 0))
+        preset_cb.grid(row=row, column=1, columnspan=3, sticky="we",
+                       pady=5, padx=(10, 0))
         preset_cb.bind("<<ComboboxSelected>>", lambda _e: self._apply_preset())
         row += 1
 
-        ttk.Label(body, text=t("label.smtp_host"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
-        self.smtp_host_var = tk.StringVar(value=s.smtp_host)
-        ttk.Entry(body, textvariable=self.smtp_host_var, font=big, width=24
-                  ).grid(row=row, column=1, sticky="we", pady=4, padx=(10, 0))
-        ttk.Label(body, text=t("label.port"), font=big
-                  ).grid(row=row, column=2, sticky="e", pady=4, padx=(8, 0))
-        self.smtp_port_var = tk.StringVar(value=str(s.smtp_port))
-        ttk.Entry(body, textvariable=self.smtp_port_var, font=big, width=6
-                  ).grid(row=row, column=3, sticky="w", pady=4, padx=(4, 0))
-        row += 1
-
-        ttk.Label(body, text=t("label.security"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
-        self.security_var = tk.StringVar(value=s.smtp_security)
-        sec_frame = ttk.Frame(body)
-        sec_frame.grid(row=row, column=1, columnspan=3, sticky="w", pady=4, padx=(10, 0))
-        for label, value in (("STARTTLS", "starttls"), ("SSL", "ssl"), ("None", "none")):
-            ttk.Radiobutton(sec_frame, text=label, value=value,
-                            variable=self.security_var).pack(side="left", padx=(0, 10))
-        row += 1
-
-        ttk.Label(body, text=t("label.smtp_user"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
-        self.smtp_user_var = tk.StringVar(value=s.smtp_user or s.sender_email)
-        ttk.Entry(body, textvariable=self.smtp_user_var, font=big, width=36
-                  ).grid(row=row, column=1, columnspan=2, sticky="we", pady=4, padx=(10, 0))
-        row += 1
-
-        ttk.Label(body, text=t("label.smtp_pass"), font=big
-                  ).grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Label(left, text=t("label.smtp_pass"), font=big
+                  ).grid(row=row, column=0, sticky="w", pady=5)
         self.smtp_pass_var = tk.StringVar(value=s.smtp_password)
-        self.pass_entry = ttk.Entry(body, textvariable=self.smtp_pass_var,
-                                    font=big, width=30, show="•")
-        self.pass_entry.grid(row=row, column=1, sticky="we", pady=4, padx=(10, 0))
+        self.pass_entry = ttk.Entry(left, textvariable=self.smtp_pass_var,
+                                    font=big, width=26, show="•")
+        self.pass_entry.grid(row=row, column=1, columnspan=2, sticky="we",
+                             pady=5, padx=(10, 0))
         self.show_pass_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(body, text=t("btn.show"), variable=self.show_pass_var,
-                        command=self._toggle_pass).grid(row=row, column=2, sticky="w",
-                                                       padx=(8, 0))
+        ttk.Checkbutton(left, text=t("btn.show"), variable=self.show_pass_var,
+                        command=self._toggle_pass).grid(row=row, column=3, sticky="w",
+                                                        padx=(6, 0))
         row += 1
 
-        # Clickable "How do I get this password?" link → opens bundled PDF.
-        link = tk.Label(body, text=t("label.how_to_get_pass"),
+        link = tk.Label(left, text=t("label.how_to_get_pass"),
                         font=("Segoe UI", 10, "underline"),
                         foreground="#1565c0", cursor="hand2")
-        link.grid(row=row, column=1, columnspan=2, sticky="w",
+        link.grid(row=row, column=1, columnspan=3, sticky="w",
                   pady=(2, 6), padx=(10, 0))
         link.bind("<Button-1>", lambda _e: open_app_password_guide(self))
         row += 1
 
-        ttk.Label(body, text=t("email.help"), font=("Segoe UI", 9),
-                  foreground="#555", wraplength=460, justify="left"
-                  ).grid(row=row, column=0, columnspan=4, sticky="w", pady=(4, 8))
+        ttk.Label(left, text=t("email.help"), font=("Segoe UI", 9),
+                  foreground="#555", wraplength=360, justify="left"
+                  ).grid(row=row, column=0, columnspan=4, sticky="w", pady=(0, 8))
         row += 1
 
         self.auto_var = tk.BooleanVar(value=s.auto_send_enabled)
-        ttk.Checkbutton(body, text=t("label.auto_send"),
-                        variable=self.auto_var).grid(row=row, column=0, columnspan=3,
+        ttk.Checkbutton(left, text=t("label.auto_send"),
+                        variable=self.auto_var).grid(row=row, column=0, columnspan=4,
                                                      sticky="w", pady=4)
         row += 1
 
-        # ---- Automation section ----------------------------------------
-        ttk.Separator(body, orient="horizontal").grid(
+        # Advanced settings toggle
+        ttk.Separator(left, orient="horizontal").grid(
+            row=row, column=0, columnspan=4, sticky="we", pady=(10, 6))
+        row += 1
+
+        self._adv_visible = False
+        self._adv_btn = ttk.Button(left,
+                                   text="▶  " + t("label.advanced_settings"),
+                                   command=self._toggle_advanced,
+                                   style="Toolbar.TButton")
+        self._adv_btn.grid(row=row, column=0, columnspan=4, sticky="w", pady=(0, 4))
+        row += 1
+
+        self._adv_frame = ttk.Frame(left, padding=(0, 2, 0, 4))
+        self._adv_frame.grid(row=row, column=0, columnspan=4, sticky="we")
+        self._adv_frame.columnconfigure(1, weight=1)
+        adv_row = 0
+
+        ttk.Label(self._adv_frame, text=t("label.smtp_host"), font=big
+                  ).grid(row=adv_row, column=0, sticky="w", pady=4)
+        self.smtp_host_var = tk.StringVar(value=s.smtp_host)
+        ttk.Entry(self._adv_frame, textvariable=self.smtp_host_var, font=big, width=20
+                  ).grid(row=adv_row, column=1, sticky="we", pady=4, padx=(10, 0))
+        ttk.Label(self._adv_frame, text=t("label.port"), font=big
+                  ).grid(row=adv_row, column=2, sticky="e", pady=4, padx=(8, 0))
+        self.smtp_port_var = tk.StringVar(value=str(s.smtp_port))
+        ttk.Entry(self._adv_frame, textvariable=self.smtp_port_var, font=big, width=6
+                  ).grid(row=adv_row, column=3, sticky="w", pady=4, padx=(4, 0))
+        adv_row += 1
+
+        ttk.Label(self._adv_frame, text=t("label.security"), font=big
+                  ).grid(row=adv_row, column=0, sticky="w", pady=4)
+        self.security_var = tk.StringVar(value=s.smtp_security)
+        sec_frame = ttk.Frame(self._adv_frame)
+        sec_frame.grid(row=adv_row, column=1, columnspan=3, sticky="w",
+                       pady=4, padx=(10, 0))
+        for lbl, val in (("STARTTLS", "starttls"), ("SSL", "ssl"), ("None", "none")):
+            ttk.Radiobutton(sec_frame, text=lbl, value=val,
+                            variable=self.security_var).pack(side="left", padx=(0, 10))
+        adv_row += 1
+
+        ttk.Label(self._adv_frame, text=t("label.smtp_user"), font=big
+                  ).grid(row=adv_row, column=0, sticky="w", pady=4)
+        ttk.Entry(self._adv_frame, textvariable=self.smtp_user_var, font=big, width=30
+                  ).grid(row=adv_row, column=1, columnspan=3, sticky="we",
+                         pady=4, padx=(10, 0))
+
+        if is_custom:
+            self._show_advanced()
+        else:
+            self._adv_frame.grid_remove()
+        row += 1
+
+        # Automation section
+        ttk.Separator(left, orient="horizontal").grid(
             row=row, column=0, columnspan=4, sticky="we", pady=(12, 6))
         row += 1
-        ttk.Label(body, text=t("auto.section"),
+        ttk.Label(left, text=t("auto.section"),
                   font=("Segoe UI Semibold", 11)).grid(
             row=row, column=0, columnspan=4, sticky="w", pady=(0, 4))
         row += 1
 
-        # Start with Windows
         self.startup_var = tk.BooleanVar(value=autorun.is_startup_enabled())
-        ttk.Checkbutton(body, text=t("auto.startup"),
+        ttk.Checkbutton(left, text=t("auto.startup"),
                         variable=self.startup_var
-                        ).grid(row=row, column=0, columnspan=4,
-                               sticky="w", pady=2)
+                        ).grid(row=row, column=0, columnspan=4, sticky="w", pady=2)
         row += 1
 
-        # Daily scheduled task — checkbox + time picker on same row
         self.daily_var = tk.BooleanVar(value=autorun.is_scheduled_task_enabled())
-        ttk.Checkbutton(body, text=t("auto.daily"), variable=self.daily_var
-                        ).grid(row=row, column=0, columnspan=2,
-                               sticky="w", pady=2)
+        ttk.Checkbutton(left, text=t("auto.daily"), variable=self.daily_var
+                        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=2)
         current_time = autorun.get_scheduled_task_time() or DEFAULT_SCHEDULE_TIME
         if current_time not in SCHEDULE_TIMES:
             current_time = DEFAULT_SCHEDULE_TIME
         self.daily_time_var = tk.StringVar(value=current_time)
-        ttk.Combobox(body, textvariable=self.daily_time_var, font=big,
+        ttk.Combobox(left, textvariable=self.daily_time_var, font=big,
                      values=SCHEDULE_TIMES, state="readonly", width=8
                      ).grid(row=row, column=2, sticky="w", pady=2, padx=(8, 0))
         row += 1
 
-        ttk.Label(body, text=t("auto.daily.note"), font=("Segoe UI", 9),
-                  foreground="#555", wraplength=460, justify="left"
+        ttk.Label(left, text=t("auto.daily.note"), font=("Segoe UI", 9),
+                  foreground="#555", wraplength=360, justify="left"
                   ).grid(row=row, column=0, columnspan=4, sticky="w",
                          pady=(2, 0), padx=(20, 0))
-        row += 1
 
+        # ── RIGHT PANEL ───────────────────────────────────────────────────
+        rrow = 0
+
+        ttk.Label(right, text=t("label.email_message"),
+                  font=("Segoe UI Semibold", 11)
+                  ).grid(row=rrow, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        rrow += 1
+
+        ttk.Label(right, text=t("label.email_placeholders"),
+                  font=("Segoe UI", 9), foreground="#555",
+                  wraplength=380, justify="left"
+                  ).grid(row=rrow, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        rrow += 1
+
+        ttk.Separator(right, orient="horizontal").grid(
+            row=rrow, column=0, columnspan=2, sticky="we", pady=(0, 8))
+        rrow += 1
+
+        ttk.Label(right, text=t("label.email_upcoming"), font=big
+                  ).grid(row=rrow, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        rrow += 1
+
+        upcoming_default = s.email_body_upcoming or i18n.t(
+            "email.body_upcoming", due="{due}", when="{when}")
+        up_wrap = ttk.Frame(right)
+        up_wrap.grid(row=rrow, column=0, columnspan=2, sticky="nswe", pady=(0, 12))
+        up_wrap.columnconfigure(0, weight=1)
+        up_wrap.rowconfigure(0, weight=1)
+        self.upcoming_text = tk.Text(up_wrap, font=("Segoe UI", 10),
+                                     width=40, height=6, wrap="word")
+        self.upcoming_text.insert("1.0", upcoming_default)
+        up_scroll = ttk.Scrollbar(up_wrap, orient="vertical",
+                                   command=self.upcoming_text.yview)
+        self.upcoming_text.configure(yscrollcommand=up_scroll.set)
+        self.upcoming_text.grid(row=0, column=0, sticky="nswe")
+        up_scroll.grid(row=0, column=1, sticky="ns")
+        rrow += 1
+
+        ttk.Separator(right, orient="horizontal").grid(
+            row=rrow, column=0, columnspan=2, sticky="we", pady=(0, 8))
+        rrow += 1
+
+        ttk.Label(right, text=t("label.email_overdue"), font=big
+                  ).grid(row=rrow, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        rrow += 1
+
+        overdue_default = s.email_body_overdue or i18n.t(
+            "email.body_overdue", due="{due}", ago="{ago}")
+        ov_wrap = ttk.Frame(right)
+        ov_wrap.grid(row=rrow, column=0, columnspan=2, sticky="nswe")
+        ov_wrap.columnconfigure(0, weight=1)
+        ov_wrap.rowconfigure(0, weight=1)
+        self.overdue_text = tk.Text(ov_wrap, font=("Segoe UI", 10),
+                                    width=40, height=6, wrap="word")
+        self.overdue_text.insert("1.0", overdue_default)
+        ov_scroll = ttk.Scrollbar(ov_wrap, orient="vertical",
+                                   command=self.overdue_text.yview)
+        self.overdue_text.configure(yscrollcommand=ov_scroll.set)
+        self.overdue_text.grid(row=0, column=0, sticky="nswe")
+        ov_scroll.grid(row=0, column=1, sticky="ns")
+
+        # ── Buttons ───────────────────────────────────────────────────────
         btns = ttk.Frame(self)
         btns.pack(fill="x", pady=(16, 0))
         ttk.Button(btns, text=t("btn.test_email"), command=self._on_test
@@ -448,6 +569,19 @@ class EmailSettingsDialog(tk.Toplevel):
                 return name
         return "Custom"
 
+    def _show_advanced(self) -> None:
+        self._adv_visible = True
+        self._adv_btn.configure(text="▼  " + t("label.advanced_settings"))
+        self._adv_frame.grid()
+
+    def _toggle_advanced(self) -> None:
+        if self._adv_visible:
+            self._adv_visible = False
+            self._adv_btn.configure(text="▶  " + t("label.advanced_settings"))
+            self._adv_frame.grid_remove()
+        else:
+            self._show_advanced()
+
     def _apply_preset(self) -> None:
         name = self.preset_var.get()
         host, port, sec = SMTP_PRESETS.get(name, ("", 587, "starttls"))
@@ -455,6 +589,8 @@ class EmailSettingsDialog(tk.Toplevel):
             self.smtp_host_var.set(host)
         self.smtp_port_var.set(str(port))
         self.security_var.set(sec)
+        if name == "Custom" and not self._adv_visible:
+            self._show_advanced()
 
     def _toggle_pass(self) -> None:
         self.pass_entry.configure(show="" if self.show_pass_var.get() else "•")
@@ -476,6 +612,8 @@ class EmailSettingsDialog(tk.Toplevel):
             smtp_password=self.smtp_pass_var.get(),
             smtp_security=self.security_var.get(),
             auto_send_enabled=bool(self.auto_var.get()),
+            email_body_upcoming=self.upcoming_text.get("1.0", "end-1c").strip(),
+            email_body_overdue=self.overdue_text.get("1.0", "end-1c").strip(),
         )
         if not EMAIL_RE.match(s.sender_email):
             messagebox.showwarning(t("msg.invalid_email.title"),

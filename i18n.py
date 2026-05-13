@@ -164,8 +164,16 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
     "label.smtp_host": {"en": "SMTP host", "bs": "SMTP host"},
     "label.port": {"en": "Port", "bs": "Port"},
     "label.security": {"en": "Security", "bs": "Sigurnost"},
-    "label.smtp_user": {"en": "SMTP username", "bs": "SMTP korisničko ime"},
-    "label.smtp_pass": {"en": "SMTP password", "bs": "SMTP lozinka"},
+    "label.smtp_user": {
+        "en": "Login username (if different from email above)",
+        "bs": "Korisničko ime (ako se razlikuje od emaila iznad)",
+    },
+    "label.smtp_pass": {"en": "App password", "bs": "App lozinka"},
+    "label.email_login_hint": {
+        "en": "This is also your login for Gmail / Outlook",
+        "bs": "Ovo je ujedno i Vaše korisničko ime za Gmail / Outlook",
+    },
+    "label.advanced_settings": {"en": "Advanced settings", "bs": "Napredne postavke"},
     "label.auto_send": {
         "en": "Send reminders automatically",
         "bs": "Šalji podsjetnike automatski",
@@ -280,6 +288,13 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
                "članarina istekla {due} (prije {ago}).\n\n"
                "Molimo Vas da je obnovite što prije kako biste i dalje "
                "uživali sve pogodnosti našeg kluba."),
+    },
+    "label.email_message": {"en": "Email Message", "bs": "Sadržaj emaila"},
+    "label.email_upcoming": {"en": "Upcoming payment", "bs": "Predstojeća uplata"},
+    "label.email_overdue": {"en": "Overdue payment", "bs": "Istekla uplata"},
+    "label.email_placeholders": {
+        "en": "Placeholders: {due} = due date  •  {when} = time phrase (upcoming)  •  {ago} = days overdue (overdue)  •  {name} = member name  •  {club} = club name",
+        "bs": "Placeholders: {due} = datum uplate  •  {when} = vremenski izraz (predstojeće)  •  {ago} = dana zakašnjenja (isteklo)  •  {name} = ime člana  •  {club} = naziv kluba",
     },
     "email.thanks": {"en": "Thank you!", "bs": "Hvala Vam!"},
     "email.sign_off": {"en": "Kind regards,", "bs": "Srdačan pozdrav,"},
