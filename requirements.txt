@@ -1,0 +1,4 @@
+pyinstaller>=6.0
+reportlab>=4.0   # build-time only — used by build_pdf.py
+pystray>=0.19    # runtime — system tray icon
+Pillow>=10.0     # runtime — needed by pystray for the icon image

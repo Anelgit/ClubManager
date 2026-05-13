@@ -1,0 +1,22 @@
+# Database (contains sensitive credentials)
+club.db
+
+# Build artifacts
+build/
+dist/
+*.exe
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
